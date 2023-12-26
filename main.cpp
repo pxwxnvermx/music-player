@@ -1,13 +1,12 @@
 #include <raylib.h>
-#include <string>
 #include <vector>
 
-typedef struct Track {
-  std::string file_name;
+typedef struct {
+  char *file_path;
   Music music;
 } Track;
 
-typedef struct PlayerState {
+typedef struct {
   std::vector<Track> tracks;
   int current_track;
 } PlayerState;
@@ -18,6 +17,7 @@ int main() {
   InitWindow(screenWidth, screenHeight, "Something");
   InitAudioDevice();
   SetTargetFPS(60);
+  SetTraceLogLevel(LOG_ALL);
 
   float timePlayed = 0.0f;
   bool pause = false;
@@ -27,19 +27,41 @@ int main() {
   while (!WindowShouldClose()) {
     if (IsFileDropped()) {
       FilePathList droppedFiles = LoadDroppedFiles();
-      if (droppedFiles.count == 1) {
-        Music music = LoadMusicStream(droppedFiles.paths[0]);
-        std::string file_name = droppedFiles.paths[0];
-        player_state.tracks.push_back(Track{file_name, music});
-        player_state.current_track = 0;
+      for (int i = 0; i < droppedFiles.count; i++) {
+        char *file_name = droppedFiles.paths[i];
+        Music music = LoadMusicStream(file_name);
+        if (IsMusicReady(music)) {
+          player_state.tracks.push_back(Track{file_name, music});
+        }
       }
       UnloadDroppedFiles(droppedFiles);
+
+      if (player_state.tracks.size() > 0) {
+        player_state.current_track = 0;
+        Track cur_track = player_state.tracks.at(player_state.current_track);
+        PlayMusicStream(cur_track.music);
+      }
     }
 
-    if (player_state.current_track >= 0 &&
-        IsMusicReady(player_state.tracks[player_state.current_track].music)) {
-      Music cur_music = player_state.tracks[player_state.current_track].music;
-      PlayMusicStream(cur_music);
+    if (player_state.current_track >= 0) {
+      Track cur_track = player_state.tracks.at(player_state.current_track);
+      Music cur_music = cur_track.music;
+
+      float track_length = GetMusicTimeLength(cur_music);
+      float track_played = GetMusicTimePlayed(cur_music);
+      timePlayed = track_played / track_length;
+      if (timePlayed > 1.0f)
+        timePlayed = 1.0f;
+
+      if (track_played >= track_length - 0.3) {
+        if (player_state.current_track < player_state.tracks.size()) {
+          player_state.current_track += 1;
+          cur_track = player_state.tracks.at(player_state.current_track);
+          PlayMusicStream(cur_track.music);
+        } else
+          StopMusicStream(cur_music);
+      }
+
       UpdateMusicStream(cur_music);
 
       if (IsKeyPressed(KEY_R)) {
@@ -48,20 +70,10 @@ int main() {
       }
 
       if (IsKeyPressed(KEY_SPACE)) {
-        pause = !pause;
-        if (pause)
+        if (IsMusicStreamPlaying(cur_music))
           PauseMusicStream(cur_music);
         else
           ResumeMusicStream(cur_music);
-      }
-
-      timePlayed =
-          GetMusicTimePlayed(cur_music) / GetMusicTimeLength(cur_music);
-      if (timePlayed > 1.0f)
-        timePlayed = 1.0f;
-
-      if (timePlayed >= GetMusicTimeLength(cur_music)) {
-        player_state.current_track = -1;
       }
     }
 
