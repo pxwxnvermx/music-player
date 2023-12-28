@@ -1,4 +1,5 @@
 #include <cstdio>
+#include <cstdlib>
 #include <cstring>
 #include <raylib.h>
 #include <vector>
@@ -7,6 +8,40 @@ typedef struct {
   char *file_path;
   Music music;
 } Track;
+
+bool DrawButton(Vector2 bounds, const char *text, Color color) {
+  bool result = false;
+  Rectangle rect_bounds = Rectangle{.x = bounds.x, .y = bounds.y};
+  Rectangle text_bounds = Rectangle{.x = bounds.x, .y = bounds.y};
+  text_bounds.width = MeasureText(text, 20);
+  text_bounds.height = 20;
+  rect_bounds.width = text_bounds.width + 20;
+  rect_bounds.height = text_bounds.height + 10;
+  text_bounds.x += (rect_bounds.width - text_bounds.width) * 0.5;
+  text_bounds.y += (rect_bounds.height - text_bounds.height) * 0.5;
+  DrawRectangleLinesEx(rect_bounds, 2, color);
+  DrawText(text, text_bounds.x, text_bounds.y, 20, color);
+
+  Vector2 mousePoint = GetMousePosition();
+  if (CheckCollisionPointRec(mousePoint, rect_bounds)) {
+    if (CheckCollisionPointRec(mousePoint, rect_bounds)) {
+      DrawRectangle(rect_bounds.x, rect_bounds.y + rect_bounds.height,
+                    rect_bounds.width, 1, color);
+      DrawRectangle(rect_bounds.x + rect_bounds.width, rect_bounds.y, 1,
+                    rect_bounds.height, color);
+      if (IsMouseButtonReleased(MOUSE_LEFT_BUTTON))
+        result = true;
+    }
+  }
+  return result;
+}
+
+// pp_music = Play Pause music
+bool pp_music(Music music) {
+  bool music_playing = IsMusicStreamPlaying(music);
+  music_playing ? PauseMusicStream(music) : ResumeMusicStream(music);
+  return music_playing;
+}
 
 int main() {
   int screenWidth = 800;
@@ -21,6 +56,10 @@ int main() {
   std::vector<Track> tracks;
   int current_track = -1;
   Track *cur_track = NULL;
+
+  // play paused text longest is PLAYING which is size 8 with \O
+  char *pp_btn_text = (char *)malloc(8);
+  strcpy(pp_btn_text, "PAUSED");
 
   while (!WindowShouldClose()) {
     if (IsFileDropped()) {
@@ -65,12 +104,8 @@ int main() {
         PlayMusicStream(music);
       }
 
-      if (IsKeyPressed(KEY_SPACE)) {
-        if (IsMusicStreamPlaying(music))
-          PauseMusicStream(music);
-        else
-          ResumeMusicStream(music);
-      }
+      if (IsKeyPressed(KEY_SPACE))
+        pp_music(music);
     }
 
     BeginDrawing();
@@ -86,9 +121,12 @@ int main() {
     if (cur_track != NULL) {
       const char *file_name = GetFileName(cur_track->file_path);
       DrawText(file_name, 255, 100, 20, LIGHTGRAY);
-      DrawText(IsMusicStreamPlaying(cur_track->music) ? "Playing" : "Paused",
-               255, 120, 20, LIGHTGRAY);
     }
+
+    if (DrawButton(Vector2{.x = 245, .y = 115}, pp_btn_text, LIGHTGRAY) &&
+        cur_track != NULL)
+      pp_music(cur_track->music) ? strcpy(pp_btn_text, "PLAYING")
+                                 : strcpy(pp_btn_text, "PAUSED");
     DrawRectangle(200, 200, 400, 12, LIGHTGRAY);
     DrawRectangle(200, 200, (int)(timePlayed * 400.0f), 12, MAROON);
     DrawRectangleLines(200, 200, 400, 12, GRAY);
