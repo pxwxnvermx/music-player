@@ -1,12 +1,10 @@
-#include <cstdio>
-#include <cstdlib>
 #include <cstring>
 #include <raylib.h>
 #include <string>
 #include <vector>
 
 typedef struct {
-  char *file_path;
+  std::string file_path;
   Music music;
 } Track;
 
@@ -46,13 +44,12 @@ bool pp_music(Music music) {
 int change_track(std::vector<Track> *tracks, int current_track,
                  int changed_track) {
   Track cur_track = tracks->at(current_track);
+  StopMusicStream(cur_track.music);
   if (0 <= changed_track && changed_track < tracks->size()) {
-    StopMusicStream(cur_track.music);
-    cur_track = tracks->at(current_track);
+    cur_track = tracks->at(changed_track);
     PlayMusicStream(cur_track.music);
     return changed_track;
   }
-  StopMusicStream(cur_track.music);
   return current_track;
 }
 
@@ -78,22 +75,25 @@ int main() {
     if (IsFileDropped()) {
       FilePathList droppedFiles = LoadDroppedFiles();
       for (int i = 0; i < droppedFiles.count; i++) {
-        char *file_name = strdup(droppedFiles.paths[i]);
-        Music music = LoadMusicStream(file_name);
+        std::string file_name = strdup(droppedFiles.paths[i]);
+        Music music = LoadMusicStream(file_name.c_str());
         if (IsMusicReady(music)) {
           tracks.push_back(Track{file_name, music});
         }
       }
       UnloadDroppedFiles(droppedFiles);
 
-      if (tracks.size() > 0) {
+      if (tracks.size() > 0 && current_track == -1) {
         current_track = 0;
         cur_track = &tracks.at(current_track);
         PlayMusicStream(cur_track->music);
       }
     }
 
-    if (tracks.size() > current_track) {
+    screenWidth = GetScreenWidth();
+    screenHeight = GetScreenHeight();
+
+    if (cur_track != NULL) {
       cur_track = &tracks.at(current_track);
       Music music = cur_track->music;
       float track_length = GetMusicTimeLength(music);
@@ -102,14 +102,9 @@ int main() {
       if (timePlayed > 1.0f)
         timePlayed = 1.0f;
 
-      if (track_played >= track_length - 0.3) {
-        current_track += 1;
-        if (current_track < tracks.size()) {
-          cur_track = &tracks.at(current_track);
-          PlayMusicStream(cur_track->music);
-        } else
-          StopMusicStream(music);
-      }
+      if (track_played >= track_length - 0.3)
+        current_track = change_track(&tracks, current_track, current_track + 1);
+
       UpdateMusicStream(music);
 
       if (IsKeyPressed(KEY_R)) {
@@ -126,9 +121,14 @@ int main() {
     ClearBackground(RAYWHITE);
 
     if (tracks.size() > 0) {
-      for (int i = 0; i < tracks.size(); i++)
-        DrawText(GetFileName(tracks[i].file_path), 255, 0 + i * 20, 20,
-                 LIGHTGRAY);
+      for (int i = 0; i < tracks.size(); i++) {
+        if (i == current_track) {
+          DrawText(GetFileName(tracks[i].file_path.c_str()), 10, 0 + i * 20, 20,
+                   TEXT_COL);
+        } else
+          DrawText(GetFileName(tracks[i].file_path.c_str()), 10, 0 + i * 20, 20,
+                   BG_COL);
+      }
     }
 
     // PREV 76
