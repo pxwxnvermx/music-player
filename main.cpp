@@ -63,13 +63,14 @@ int main() {
   SetTargetFPS(60);
   SetTraceLogLevel(LOG_ALL);
 
-  float timePlayed = 0.0f;
-  bool pause = false;
   std::vector<Track> tracks;
   int current_track = -1;
   Track *cur_track = NULL;
 
+  const Color BG_COL = LIGHTGRAY;
+  const Color TEXT_COL = BLACK;
   std::string pp_btn_text = "PAUSED";
+  float timePlayed = 0.0f;
 
   while (!WindowShouldClose()) {
     if (IsFileDropped()) {
@@ -136,20 +137,20 @@ int main() {
     // NEXT 76
     // 262 full width of controls with padding for first two button
     float controls_x = (screenWidth - 262) * 0.5;
-    float controls_y = (screenHeight - 115) * 0.75;
-    bool prev_btn_clicked = DrawButton(
-        Vector2{.x = controls_x, .y = controls_y}, "PREV", LIGHTGRAY);
+    float controls_y = (screenHeight - 50);
+    bool prev_btn_clicked =
+        DrawButton(Vector2{.x = controls_x, .y = controls_y}, "PREV", BG_COL);
     bool pp_btn_clicked =
         DrawButton(Vector2{.x = controls_x + 80, .y = controls_y},
-                   pp_btn_text.c_str(), LIGHTGRAY);
+                   pp_btn_text.c_str(), BG_COL);
     bool next_btn_clicked = DrawButton(
-        Vector2{.x = controls_x + 186, .y = controls_y}, "NEXT", LIGHTGRAY);
+        Vector2{.x = controls_x + 186, .y = controls_y}, "NEXT", BG_COL);
 
     if (cur_track != NULL) {
-      const char *file_name = GetFileName(cur_track->file_path);
+      const char *file_name = GetFileName(cur_track->file_path.c_str());
       float file_name_width = MeasureText(file_name, 20);
       DrawText(file_name, (screenWidth - file_name_width) * 0.5,
-               controls_y - 25, 20, LIGHTGRAY);
+               controls_y - 25, 20, TEXT_COL);
 
       if (pp_btn_clicked) {
         if (pp_music(cur_track->music))
@@ -165,13 +166,11 @@ int main() {
         current_track = change_track(&tracks, current_track, current_track + 1);
     }
 
-    DrawRectangle((screenWidth - 400) * 0.5, controls_y - 60, 400, 12,
-                  LIGHTGRAY);
+    DrawRectangle((screenWidth - 400) * 0.5, controls_y - 60, 400, 12, BG_COL);
     DrawRectangle((screenWidth - 400) * 0.5, controls_y - 60,
                   (int)(timePlayed * 400.0f), 12, MAROON);
     DrawRectangleLines((screenWidth - 400) * 0.5, controls_y - 60, 400, 12,
                        GRAY);
-
     EndDrawing();
   }
 
